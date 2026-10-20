@@ -1,0 +1,43 @@
+name: Build and validate Windows installer
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.18.0'
+      - name: Build installer and validate both actual distributions
+        shell: pwsh
+        run: ./ci/build-windows-installer.ps1
+      - name: Publish only after native startup and repeated-launch tests pass
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $output = Join-Path $env:RUNNER_TEMP 'atelie-windows-distribution/release'
+          $tag = 'v0.1.1-windows'
+          gh release create $tag --draft --target $env:GITHUB_SHA --title 'Ateliê de Arte — Instalador Windows e pasta completa v0.1.1' --notes-file (Join-Path $output 'release-notes.md')
+          $files = @(Get-ChildItem $output -File | Where-Object Name -ne 'release-notes.md' | ForEach-Object FullName)
+          gh release upload $tag @files --clobber
+          gh release edit $tag --draft=false --latest
+      - name: Save native Windows verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-installer-startup-verification
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/atelie-windows-distribution/diagnostics-*/*.json
+            ${{ runner.temp }}/atelie-windows-distribution/diagnostics-*/*.png
+            ${{ runner.temp }}/atelie-windows-distribution/diagnostics-*/*.log
+            ${{ runner.temp }}/atelie-windows-distribution/diagnostics-*/*.txt
+            ${{ runner.temp }}/atelie-windows-distribution/release/windows-startup-validation.json
