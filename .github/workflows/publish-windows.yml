@@ -1,0 +1,48 @@
+name: Publish Windows portable application
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Reassemble and verify authorized executable
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import hashlib, json, zipfile
+          manifest = json.loads(Path('release-payload/manifest.json').read_text())
+          output = Path(manifest['filename'])
+          with output.open('wb') as destination:
+              for item in manifest['parts']:
+                  source = Path('release-payload') / item['filename']
+                  block = source.read_bytes()
+                  assert hashlib.sha256(block).hexdigest() == item['sha256'], source
+                  destination.write(block)
+          assert output.stat().st_size == manifest['bytes']
+          with output.open('rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+          assert digest == manifest['sha256']
+          Path(str(output)+'.sha256').write_text(digest+'  '+output.name+'\n')
+          with zipfile.ZipFile('Atelie-de-Arte-Windows.zip', 'w', compression=zipfile.ZIP_STORED) as archive:
+              archive.write(output, output.name)
+              archive.write(Path(str(output)+'.sha256'), output.name+'.sha256')
+              archive.write('release-payload/LEIA-ME.md', 'LEIA-ME.md')
+          print('Executable verified:', output.name, output.stat().st_size, digest)
+          PYTHON
+      - name: Publish files on GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          tag=v0.1.0-windows
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title 'Ateliê de Arte — Windows x64 v0.1.0' --notes-file release-payload/release-notes.md
+          fi
+          gh release upload "$tag" Atelie-de-Arte-Windows-x64.exe Atelie-de-Arte-Windows-x64.exe.sha256 Atelie-de-Arte-Windows.zip release-payload/LEIA-ME.md --clobber
+          gh release edit "$tag" --draft=false --latest
