@@ -15,7 +15,10 @@ if ($digest -ne '43ead0da4375f7631928adac467b8fa6f848043c0f67c690187d6077accb36c
 & 7z x -y "-o$outer" $portable
 $embedded = Join-Path $outer '$PLUGINSDIR\app-64.7z'
 & 7z x -y "-o$application" $embedded
-$executable = Join-Path $application 'Ateliê de Arte.exe'
+$executable = Join-Path $application 'Atelie-de-Arte.exe'
+# The NSIS ZIP reader does not consistently preserve UTF-8 executable names.
+# Keep the visible product/shortcut name, and use an ASCII file name on disk.
+Move-Item -LiteralPath (Join-Path $application 'Ateliê de Arte.exe') -Destination $executable
 foreach ($required in @($executable, (Join-Path $application 'resources/app.asar'), (Join-Path $application 'resources/runtime/node.exe'), (Join-Path $application 'resources/server/dist/index.html'))) {
     if (!(Test-Path $required)) { throw ('Missing packaged component: ' + $required) }
 }
@@ -24,7 +27,7 @@ ATELIÊ DE ARTE — WINDOWS 10/11 x64
 
 INSTALADOR (recomendado): abra Atelie-de-Arte-Instalador-Windows-x64.exe e aguarde a instalação. Depois use o atalho Ateliê de Arte na área de trabalho ou no menu Iniciar.
 
-PASTA COMPLETA: use Extrair Tudo no ZIP e abra Ateliê de Arte.exe dentro da pasta extraída. Mantenha juntos o EXE, as DLLs e a pasta resources. Esta versão abre diretamente, sem descompactar o aplicativo novamente a cada uso.
+PASTA COMPLETA: use Extrair Tudo no ZIP e abra Atelie-de-Arte.exe dentro da pasta extraída. Mantenha juntos o EXE, as DLLs e a pasta resources. Esta versão abre diretamente, sem descompactar o aplicativo novamente a cada uso.
 
 Não precisa instalar Node.js, npm ou banco de dados, nem executar comandos. Seus projetos e arquivos ficam no seu usuário do Windows, separados do programa. No aplicativo, use Aplicativo > Abrir pasta dos meus dados.
 
@@ -56,8 +59,24 @@ if (!$installation.WaitForExit(180000)) {
 $installation.Refresh()
 if ($installation.ExitCode -ne 0) { throw ('Installer failed with exit code ' + $installation.ExitCode) }
 $programs = Join-Path $env:LOCALAPPDATA 'Programs'
-$installed = Get-ChildItem $programs -Filter 'Ateliê de Arte.exe' -File -Recurse | Select-Object -First 1
+$installationDiagnostics = Join-Path $working 'diagnostics-installation'
+New-Item -ItemType Directory -Path $installationDiagnostics -Force | Out-Null
+$registry = @(Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -Like '*Ateli*' | Select-Object DisplayName,InstallLocation,DisplayIcon,UninstallString)
+$candidates = @(Get-ChildItem $programs -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue | Where-Object FullName -Like '*Ateli*' | Select-Object FullName,Length)
+$shortcutDirectories = @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'))
+$shortcuts = @()
+$shell = New-Object -ComObject WScript.Shell
+foreach ($directory in $shortcutDirectories) {
+    foreach ($shortcut in @(Get-ChildItem $directory -Filter '*Ateli*.lnk' -File -Recurse -ErrorAction SilentlyContinue)) {
+        $target = $shell.CreateShortcut($shortcut.FullName)
+        $shortcuts += @{ path = $shortcut.FullName; target = $target.TargetPath; targetExists = Test-Path -LiteralPath $target.TargetPath }
+    }
+}
+@{ exitCode = $installation.ExitCode; registry = $registry; executableFiles = $candidates; shortcuts = $shortcuts } | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $installationDiagnostics 'installation.json') -Encoding utf8
+$candidates | Format-Table -AutoSize
+$installed = Get-ChildItem $programs -Filter 'Atelie-de-Arte.exe' -File -Recurse | Select-Object -First 1
 if (!$installed) { throw 'Installed application executable was not found.' }
+if (!@($shortcuts | Where-Object { $_.target -eq $installed.FullName -and $_.targetExists }).Count) { throw 'A working application shortcut was not created.' }
 & pwsh -NoProfile -File (Join-Path $repositoryRoot 'ci/windows-app-smoke.ps1') -LaunchPath $installed.FullName -DiagnosticsDirectory (Join-Path $working 'diagnostics-installed') -DebugPort 9223
 if ($LASTEXITCODE -ne 0) { throw 'The installed application failed its native startup test.' }
 
@@ -66,7 +85,7 @@ $zip = Join-Path $output 'Atelie-de-Arte-Windows-Pasta-Completa.zip'
 & 7z t $zip
 $complete = Join-Path $working 'complete-from-zip'
 & 7z x -y "-o$complete" $zip
-& pwsh -NoProfile -File (Join-Path $repositoryRoot 'ci/windows-app-smoke.ps1') -LaunchPath (Join-Path $complete 'Ateliê de Arte.exe') -DiagnosticsDirectory (Join-Path $working 'diagnostics-folder') -DebugPort 9222
+& pwsh -NoProfile -File (Join-Path $repositoryRoot 'ci/windows-app-smoke.ps1') -LaunchPath (Join-Path $complete 'Atelie-de-Arte.exe') -DiagnosticsDirectory (Join-Path $working 'diagnostics-folder') -DebugPort 9222
 if ($LASTEXITCODE -ne 0) { throw 'The actual complete ZIP failed its native startup test.' }
 foreach ($file in @($installer, $zip)) {
     $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -87,7 +106,7 @@ $report | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $output 'windows-sta
 @'
 Atualização da distribuição Windows para eliminar a extração silenciosa em cada abertura.
 
-Baixe Atelie-de-Arte-Instalador-Windows-x64.exe, instale e abra pelo atalho Ateliê de Arte. A alternativa Atelie-de-Arte-Windows-Pasta-Completa.zip contém todo o aplicativo: use Extrair Tudo e abra Ateliê de Arte.exe dentro da pasta.
+Baixe Atelie-de-Arte-Instalador-Windows-x64.exe, instale e abra pelo atalho Ateliê de Arte. A alternativa Atelie-de-Arte-Windows-Pasta-Completa.zip contém todo o aplicativo: use Extrair Tudo e abra Atelie-de-Arte.exe dentro da pasta.
 
 Os dois modos foram abertos nativamente no Windows, com janela, interface, backend e segunda abertura verificados antes da publicação. As funcionalidades do sistema permanecem as da versão 0.1.0; esta revisão altera a distribuição Windows.
 
