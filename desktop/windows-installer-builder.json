@@ -18,6 +18,7 @@
     "createDesktopShortcut": "always",
     "createStartMenuShortcut": true,
     "deleteAppDataOnUninstall": false,
-    "useZip": true
+    "useZip": true,
+    "differentialPackage": false
   }
 }
