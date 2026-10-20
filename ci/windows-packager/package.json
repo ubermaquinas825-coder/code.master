@@ -1,0 +1,14 @@
+{
+  "name": "atelie-de-arte-desktop",
+  "productName": "Ateliê de Arte",
+  "version": "0.1.1",
+  "description": "Ateliê de Arte para Windows: ferramentas locais de criação e preparação de artes.",
+  "private": true,
+  "main": "main.cjs",
+  "author": "Ateliê de Arte",
+  "devDependencies": {
+    "electron": "44.9.1",
+    "electron-builder": "26.15.3",
+    "extract-zip": "2.0.1"
+  }
+}
