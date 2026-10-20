@@ -1,0 +1,92 @@
+{
+  "filename": "Atelie-de-Arte-Windows-x64.exe",
+  "bytes": 134876295,
+  "sha256": "43ead0da4375f7631928adac467b8fa6f848043c0f67c690187d6077accb36c1",
+  "parts": [
+    {
+      "filename": "part-000.bin",
+      "bytes": 8388608,
+      "sha256": "beef56abac047956aada9b640e55fc452be58de4da7bbb5a78b98ad4eba3b322"
+    },
+    {
+      "filename": "part-001.bin",
+      "bytes": 8388608,
+      "sha256": "b94159ba1ae4d589c802a114f368b8cef33446c53b44cd0863c7a17e3380cab1"
+    },
+    {
+      "filename": "part-002.bin",
+      "bytes": 8388608,
+      "sha256": "cec8785ab349416914f0b3ab93bf9ccb6ffd466f1fbaf604c7305ce012b289e3"
+    },
+    {
+      "filename": "part-003.bin",
+      "bytes": 8388608,
+      "sha256": "58ccbe934b1bbbe194e5a83e680c2195109fc83ba5389395e03eeecb14b7de26"
+    },
+    {
+      "filename": "part-004.bin",
+      "bytes": 8388608,
+      "sha256": "fdd02f3195cbe95d75dd0ed67b2273167109d545bc13110507b11fc807ce248e"
+    },
+    {
+      "filename": "part-005.bin",
+      "bytes": 8388608,
+      "sha256": "7079b78d6141397cb7a1840608bc91a717fb04a8d4b2a7e400f24c06826e9c41"
+    },
+    {
+      "filename": "part-006.bin",
+      "bytes": 8388608,
+      "sha256": "4938938d0a46e1af576b6ab8bb97bd9472ab075936f27e0463841b0a6ac41e97"
+    },
+    {
+      "filename": "part-007.bin",
+      "bytes": 8388608,
+      "sha256": "a313a18b2472771770dbd2670887579f14600ec862ee14bce6bc7a2f5752682e"
+    },
+    {
+      "filename": "part-008.bin",
+      "bytes": 8388608,
+      "sha256": "e8da33a8fbcadbd7aa3a7b6d3fe272705e3ca641c0c159198434e5faaba7d18d"
+    },
+    {
+      "filename": "part-009.bin",
+      "bytes": 8388608,
+      "sha256": "2635d3a67f8f2c935a50a120b3863806b5bb9b2c5c8b9a0617cc92006f27f8f0"
+    },
+    {
+      "filename": "part-010.bin",
+      "bytes": 8388608,
+      "sha256": "d8530711d0ae168a78c6c451631c642242ab6b607ca7e3e189a59ec6eaac0c6c"
+    },
+    {
+      "filename": "part-011.bin",
+      "bytes": 8388608,
+      "sha256": "2a89bfc3d8bd8cfa6726ac1ba0d52b20cfe81cad343552e71f68016ba6c145f4"
+    },
+    {
+      "filename": "part-012.bin",
+      "bytes": 8388608,
+      "sha256": "475ccb83841262f44e17aa41a7061f0758e96db50c77a66e85f048a1c7d2c336"
+    },
+    {
+      "filename": "part-013.bin",
+      "bytes": 8388608,
+      "sha256": "036b9f75c53b43ffe9832531978e6762f5a723a8768aee74527bad50f5b1d3cb"
+    },
+    {
+      "filename": "part-014.bin",
+      "bytes": 8388608,
+      "sha256": "f64aaf737bb171dac44475a8ac87e350273c957f7bb1986df976a63e64458546"
+    },
+    {
+      "filename": "part-015.bin",
+      "bytes": 8388608,
+      "sha256": "0855893eaaf6933e83680877eff0524ffac6c445a8a652b319792310e4bac4d7"
+    },
+    {
+      "filename": "part-016.bin",
+      "bytes": 658567,
+      "sha256": "c15f5c196eea2f3695770b8615759cfc4821a43c0cf822c2bc2ddd1fed5ca9dd"
+    }
+  ]
+}
