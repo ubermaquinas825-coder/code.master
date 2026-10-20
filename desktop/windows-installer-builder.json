@@ -1,0 +1,23 @@
+{
+  "appId": "com.ateliedearte.desktop",
+  "productName": "Ateliê de Arte",
+  "electronVersion": "44.9.1",
+  "npmRebuild": false,
+  "compression": "normal",
+  "directories": { "output": "release" },
+  "win": {
+    "target": [{ "target": "nsis", "arch": ["x64"] }],
+    "signAndEditExecutable": false
+  },
+  "nsis": {
+    "artifactName": "Atelie-de-Arte-Instalador-Windows-x64.exe",
+    "oneClick": true,
+    "perMachine": false,
+    "allowElevation": false,
+    "runAfterFinish": true,
+    "createDesktopShortcut": "always",
+    "createStartMenuShortcut": true,
+    "deleteAppDataOnUninstall": false,
+    "useZip": true
+  }
+}
