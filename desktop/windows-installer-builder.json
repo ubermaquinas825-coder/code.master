@@ -6,6 +6,7 @@
   "compression": "normal",
   "directories": { "output": "release" },
   "win": {
+    "executableName": "Atelie-de-Arte",
     "target": [{ "target": "nsis", "arch": ["x64"] }],
     "signAndEditExecutable": false
   },
@@ -17,6 +18,7 @@
     "runAfterFinish": true,
     "createDesktopShortcut": "always",
     "createStartMenuShortcut": true,
+    "shortcutName": "Ateliê de Arte",
     "deleteAppDataOnUninstall": false,
     "useZip": true,
     "differentialPackage": false
