@@ -1,0 +1,25 @@
+name: Diagnose published Windows startup
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  startup:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Run the actual released EXE on Windows
+        shell: pwsh
+        run: ./ci/windows-startup-diagnostic.ps1
+      - name: Save startup diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-startup-diagnostics
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/atelie-windows-startup/*.json
+            ${{ runner.temp }}/atelie-windows-startup/*.log
+            ${{ runner.temp }}/atelie-windows-startup/*.png
+            ${{ runner.temp }}/atelie-windows-startup/*.txt
