@@ -48,7 +48,12 @@ try {
 $installer = Join-Path $output 'Atelie-de-Arte-Instalador-Windows-x64.exe'
 if (!(Test-Path $installer)) { throw 'Installer was not generated.' }
 Write-Host 'Installing in the current Windows user profile for the real startup test.'
-$installation = Start-Process -FilePath $installer -ArgumentList '/S' -PassThru -Wait
+$installation = Start-Process -FilePath $installer -ArgumentList '/S' -PassThru
+if (!$installation.WaitForExit(180000)) {
+    Stop-Process -Id $installation.Id -Force -ErrorAction SilentlyContinue
+    throw 'Installer did not complete within three minutes.'
+}
+$installation.Refresh()
 if ($installation.ExitCode -ne 0) { throw ('Installer failed with exit code ' + $installation.ExitCode) }
 $programs = Join-Path $env:LOCALAPPDATA 'Programs'
 $installed = Get-ChildItem $programs -Filter 'Ateliê de Arte.exe' -File -Recurse | Select-Object -First 1
