@@ -1,0 +1,112 @@
+name: Publish and validate Windows app update
+on:
+  workflow_dispatch:
+    inputs:
+      payload_commit:
+        description: 'Full commit SHA containing payload/windows-update.zip and payload/windows-update-manifest.json'
+        required: true
+        type: string
+      patch_sha256:
+        description: 'Reviewed SHA-256 of windows-update.zip'
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: windows-update-v0.2.0
+  cancel-in-progress: false
+jobs:
+  build-test-publish:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - name: Validate dispatch inputs
+        shell: pwsh
+        env:
+          PAYLOAD_COMMIT: ${{ inputs.payload_commit }}
+          PATCH_SHA256: ${{ inputs.patch_sha256 }}
+        run: |
+          if ($env:PAYLOAD_COMMIT -cnotmatch '^[a-fA-F0-9]{40}$') { throw 'payload_commit must be a full commit SHA.' }
+          if ($env:PATCH_SHA256 -cnotmatch '^[a-fA-F0-9]{64}$') { throw 'patch_sha256 must be a SHA-256 digest.' }
+      - name: Checkout trusted main CI and pinned packaging metadata
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Checkout reviewed compiled payload commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.payload_commit }}
+          path: update-payload
+          persist-credentials: false
+          sparse-checkout: payload
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.18.0'
+      - name: Build installer and verify actual installer and final complete ZIP
+        shell: pwsh
+        env:
+          PAYLOAD_COMMIT: ${{ inputs.payload_commit }}
+          PATCH_SHA256: ${{ inputs.patch_sha256 }}
+          OPENAI_API_KEY: ''
+          APP_OPENAI_API_KEY: ''
+        run: |
+          ./ci/publish-app-update.ps1 -PayloadDirectory (Join-Path $env:GITHUB_WORKSPACE 'update-payload/payload') -PatchSha256 $env:PATCH_SHA256 -PayloadCommit $env:PAYLOAD_COMMIT
+      - name: Publish whitelisted release files after every native check passed
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $output = Join-Path $env:RUNNER_TEMP 'atelie-windows-update/release'
+          $report = Get-Content (Join-Path $output 'windows-update-validation.json') -Raw | ConvertFrom-Json
+          if ($report.status -ne 'passed' -or $report.version -ne '0.2.0') { throw 'Native verification did not pass.' }
+          $tag = 'v0.2.0-windows'
+          $assets = @(
+            'Atelie-de-Arte-Instalador-Windows-x64.exe',
+            'Atelie-de-Arte-Instalador-Windows-x64.exe.sha256',
+            'Atelie-de-Arte-Windows-Pasta-Completa.zip',
+            'Atelie-de-Arte-Windows-Pasta-Completa.zip.sha256',
+            'LEIA-ME.txt',
+            'windows-update-validation.json'
+          ) | ForEach-Object {
+            $file = Join-Path $output $_
+            if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw ('Missing release asset: ' + $_) }
+            $file
+          }
+          $existingText = & gh release list --limit 100 --json tagName,isDraft
+          $existing = @($existingText | ConvertFrom-Json | Where-Object tagName -eq $tag)
+          if ($existing.Count -and !$existing[0].isDraft) { throw 'Version 0.2.0 is already public; refusing to replace a public release.' }
+          $mainCommit = (& git rev-parse HEAD).Trim()
+          if (!$existing.Count) {
+            gh release create $tag --draft --target $mainCommit --title 'Ateliê de Arte — Windows v0.2.0' --notes-file (Join-Path $output 'release-notes.md')
+          } else {
+            gh release edit $tag --target $mainCommit --title 'Ateliê de Arte — Windows v0.2.0' --notes-file (Join-Path $output 'release-notes.md')
+          }
+          $previousAssets = @((& gh release view $tag --json assets | ConvertFrom-Json).assets)
+          foreach ($asset in $previousAssets) {
+            if ($asset.name -notin @($assets | ForEach-Object { Split-Path $_ -Leaf })) { gh release delete-asset $tag $asset.name --yes }
+          }
+          gh release upload $tag @assets --clobber
+          $uploaded = @((& gh release view $tag --json assets | ConvertFrom-Json).assets)
+          if ($uploaded.Count -ne $assets.Count) { throw 'Draft asset count does not match the release whitelist.' }
+          foreach ($asset in $assets) {
+            $item = Get-Item -LiteralPath $asset
+            $remote = @($uploaded | Where-Object name -eq $item.Name)
+            if ($remote.Count -ne 1 -or $remote[0].size -ne $item.Length) { throw ('Draft asset upload is incomplete: ' + $item.Name) }
+          }
+          gh release edit $tag --draft=false --latest
+      - name: Save native Windows verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-v0.2.0-native-verification
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/atelie-windows-update/diagnostics-*/*.json
+            ${{ runner.temp }}/atelie-windows-update/diagnostics-*/*.png
+            ${{ runner.temp }}/atelie-windows-update/diagnostics-*/*.log
+            ${{ runner.temp }}/atelie-windows-update/diagnostics-*/*.txt
+            ${{ runner.temp }}/atelie-windows-update/release/windows-update-validation.json
